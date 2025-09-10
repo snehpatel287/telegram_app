@@ -4,13 +4,29 @@ import { useEffect, useState } from 'react'
 declare global {
   interface Window {
     Telegram?: {
-      WebApp?: any
+      WebApp?: {
+        ready: () => void
+        initDataUnsafe?: {
+          user?: {
+            id: number
+            first_name: string
+            last_name?: string
+            username?: string
+          }
+        }
+      }
     }
   }
 }
 
+type UserData = {
+  id: number
+  name: string
+  username: string | null
+}
+
 export default function Home() {
-  const [userData, setUserData] = useState(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
   useEffect(() => {
     const initTelegram = async () => {
@@ -21,12 +37,15 @@ export default function Home() {
         
         await new Promise(resolve => {
           script.onload = () => {
-            const check = () => window.Telegram?.WebApp ? resolve() : setTimeout(check, 100)
+            const check = () => window.Telegram?.WebApp ? resolve(undefined) : setTimeout(check, 100)
             check()
           }
         })
       }
 
+      if (!window.Telegram?.WebApp) {
+        return
+      }
       const tg = window.Telegram.WebApp
       tg.ready()
       
