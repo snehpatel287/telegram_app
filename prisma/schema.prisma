@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id
+  firstName String
+  lastName  String?
+  username  String?
+  balance   Int      @default(0)
+  purchases Purchase[]
+}
+
+model Character {
+  id          Int      @id @default(autoincrement())
+  name        String
+  rarity      String   // Common, Rare, Epic, Legendary
+  multiplier  Int
+  price       Int
+  durationSec Int      // e.g., 60s or 120s
+  purchases   Purchase[]
+}
+
+model Purchase {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  characterId Int
+  active      Boolean   @default(true)
+  startedAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  character   Character @relation(fields: [characterId], references: [id])
+}

@@ -1,74 +1,40 @@
-'use client'
-import { useEffect, useState } from 'react'
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        ready: () => void
-        initDataUnsafe?: {
-          user?: {
-            id: number
-            first_name: string
-            last_name?: string
-            username?: string
-          }
-        }
-      }
-    }
-  }
-}
-
-type UserData = {
-  id: number
-  name: string
-  username: string | null
-}
+"use client";
+import { useEffect, useState } from "react";
+import TapButton from "@/app/components/TapButton";
+import UserInfo from "@/app/components/UserInfo";
+import CharacterShop from "@/app/components/CharacterShop";
+import ActiveCards from "@/app/components/ActiveCards";
+import { getTelegramUser } from "@/lib/telegram";
 
 export default function Home() {
-  const [userData, setUserData] = useState<UserData | null>(null)
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const initTelegram = async () => {
-      if (!window.Telegram?.WebApp) {
-        const script = document.createElement('script')
-        script.src = 'https://telegram.org/js/telegram-web-app.js'
-        document.head.appendChild(script)
-        
-        await new Promise(resolve => {
-          script.onload = () => {
-            const check = () => window.Telegram?.WebApp ? resolve(undefined) : setTimeout(check, 100)
-            check()
-          }
-        })
-      }
+    const tgUser = getTelegramUser();
+    if (!tgUser) return;
 
-      if (!window.Telegram?.WebApp) {
-        return
-      }
-      const tg = window.Telegram.WebApp
-      tg.ready()
-      
-      const user = tg.initDataUnsafe?.user
-      if (user) {
-        setUserData({
-          id: user.id,
-          name: `${user.first_name} ${user.last_name || ''}`.trim(),
-          username: user.username || null
-        })
-      }
-    }
-    initTelegram()
-  }, [])
+    fetch("/api/user", {
+      method: "POST",
+      body: JSON.stringify({
+        id: tgUser.id.toString(),
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name,
+        username: tgUser.username,
+      }),
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((data) => setUser(data));
+  }, []);
+
+  if (!user) return <p>Loading...</p>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">User Info</h1>
-      <div className="space-y-2">
-        <p>ID: {userData?.id || 'N/A'}</p>
-        <p>Name: {userData?.name || 'N/A'}</p>
-        <p>Username: {userData?.username ? `@${userData.username}` : 'N/A'}</p>
-      </div>
-    </div>
-  )
+    <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-4 bg-gradient-to-br from-sky-500 to-indigo-700 text-white">
+      <UserInfo user={user} />
+      <TapButton userId={user.id} onUpdate={setUser} />
+      <CharacterShop userId={user.id} onUpdate={setUser} />
+      <ActiveCards userId={user.id} />
+    </main>
+  );
 }
